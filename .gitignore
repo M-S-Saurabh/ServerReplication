@@ -10,3 +10,4 @@
 /RMIBankSessionImpl.class
 /RMIClient.class
 /RMIClientThread.class
+/RMIBankServerImpl$ConnectToCluster.class
