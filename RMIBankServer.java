@@ -21,4 +21,6 @@ public interface RMIBankServer extends Remote {
 	
 	// helps us transfer money between bank accounts
 	String transferRMI(int sourceId, int targetId, int amount) throws RemoteException;
+	
+	void multicast(Message message) throws RemoteException;
 }

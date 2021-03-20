@@ -18,6 +18,10 @@ public final class Constants {
 	// Status message strings
 	public static final String OK_STATUS = "OK";
 	public static final String FAIL_STATUS = "FAIL";
+	public static final String CREATE_MESSAGE = "CREATE";
+	public static final String DEPOSIT_MESSAGE = "DEPOSIT";
+	public static final String CHECK_MESSAGE = "CHECK";
+	public static final String TRANSFER_MESSAGE = "TRANSFER";
 	
 	// Failure reason strings
 	public static final String INSUFFICIENT_BALANCE = "In-sufficient balance in source account.";
@@ -25,4 +29,10 @@ public final class Constants {
 	// RMI stub name used on registry.
 	public static final String RMI_SERVER_NAME = "MyRMIBankServer";
 	
+	public static enum MessageType {
+		CREATE, 
+		DEPOSTI,
+		CHECK, 
+		TRANSFER
+	};
 }

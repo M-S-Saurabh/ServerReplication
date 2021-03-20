@@ -2,12 +2,5 @@
 /EchoClient.class
 /EchoServer.class
 /logs/*.log
-/Constants.class
-/BankAccount.class
-/RMIBankServer.class
-/RMIBankServerImpl.class
-/RMIBankSession.class
-/RMIBankSessionImpl.class
-/RMIClient.class
-/RMIClientThread.class
-/RMIBankServerImpl$ConnectToCluster.class
+/logs/*.lck
+/*.class

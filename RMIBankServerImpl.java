@@ -20,9 +20,12 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.Map;
 import java.util.Random;
 import java.util.Map.Entry;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.List;
+import java.util.LinkedList;
+import java.util.PriorityQueue;
 import java.util.logging.FileHandler;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
@@ -34,17 +37,26 @@ public class RMIBankServerImpl extends UnicastRemoteObject implements RMIBankSer
 	
 	private static int RMIRegPort; // makes sense to keep static as each JVM instance would have on only one RMI reg 
 
-	private Map<Integer, RMIBankServer> serverStubs;
+	private List<RMIBankServer> serverStubs;
+	
+	private PriorityQueue<Message> lamportQueue;
 	
 	private Hashtable<Integer, BankAccount> accounts;
+	
+	private int lamportClock;
 
 	private int serverID;
+	
+	private int simpleCounter; // TODO for intitial debugging remove later
 
 	public RMIBankServerImpl(int serverID, Map<Integer, String[]> serverInfo) throws RemoteException {
 		super();
 		this.accounts = new Hashtable<Integer, BankAccount>(100);
 		this.serverID = serverID;
-		this.serverStubs = new HashMap<>();
+		this.serverStubs = new LinkedList<>();
+		this.lamportClock = 0;
+		this.simpleCounter = 0;
+		this.lamportQueue = new PriorityQueue<Message>((a,b)->Integer.compare(a.getTimeStamp(), b.getTimeStamp()));
 		Thread postConstruct = new Thread(new ConnectToCluster(serverID, serverInfo, serverStubs));
 		postConstruct.start();
 	}
@@ -115,9 +127,9 @@ public class RMIBankServerImpl extends UnicastRemoteObject implements RMIBankSer
 	public class ConnectToCluster implements Runnable {
 		private int serverId;
 		private Map<Integer, String[]> serverInfo;
-		private Map<Integer, RMIBankServer> serverStubs;
+		private List<RMIBankServer> serverStubs;
 
-		ConnectToCluster(int serverId, Map<Integer, String[]> serverInfo, Map<Integer, RMIBankServer> serverStubs) {
+		ConnectToCluster(int serverId, Map<Integer, String[]> serverInfo, List<RMIBankServer> serverStubs) {
 			this.serverId = serverId;
 			this.serverInfo = serverInfo;
 			this.serverStubs = serverStubs;
@@ -142,7 +154,7 @@ public class RMIBankServerImpl extends UnicastRemoteObject implements RMIBankSer
 						stub = (RMIBankServer) Naming.lookup(
 								String.format("rmi://%s:%s/%s", hostName, rmiPort, serverName));
 						System.out.println("stub received for:"+serverName);
-						serverStubs.put(sID, stub);
+						serverStubs.add(stub);
 					} catch (Exception e) {
 						System.out.println("retrying connecting to:"+serverName);
 					}
@@ -154,10 +166,17 @@ public class RMIBankServerImpl extends UnicastRemoteObject implements RMIBankSer
 
 	@Override
 	public int createAccountRMI() throws RemoteException {
-		BankAccount newAccount = new BankAccount();
-		logger.info("New Account created uid: " + newAccount.UID);
-		accounts.put(newAccount.UID, newAccount);
-		return newAccount.UID;
+		CreateMessage message = new CreateMessage(++this.lamportClock, Constants.CREATE_MESSAGE, new LinkedList<>(Arrays.asList(this.simpleCounter++)));
+		this.lamportQueue.add(message);
+		for (RMIBankServer server: serverStubs) {
+			server.multicast(message);
+		}
+		/*
+		 * BankAccount newAccount = new BankAccount();
+		 * logger.info("New Account created uid: " + newAccount.UID);
+		 * accounts.put(newAccount.UID, newAccount); return newAccount.UID;
+		 */
+		return 0;
 	}
 
 	@Override
@@ -193,6 +212,12 @@ public class RMIBankServerImpl extends UnicastRemoteObject implements RMIBankSer
 					+ Constants.OK_STATUS);
 			return Constants.OK_STATUS;
 		}
+	}
+	
+	@Override
+	public void multicast(Message message) {
+		//System.out.println("message recived at server: "+this.serverID+"for account: "+message.getRequest().get(0));
+		System.out.println("message recived at server: "+this.serverID+" type:"+ message.getType() +"for account: "+message.getRequest().get(0));
 	}
 
 }

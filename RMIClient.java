@@ -42,25 +42,25 @@ public class RMIClient {
 		
         System.setSecurityManager(new SecurityManager());
 		try { // trying to get the bankserver stub from the RMI registry
+			StringBuilder sb = new StringBuilder(Constants.RMI_SERVER_NAME);
+			sb.append(":").append("0");
 			RMIBankServer bankServer = (RMIBankServer) Naming.lookup(
-					String.format("rmi://%s:%s/%s", args[0], args[1], Constants.RMI_SERVER_NAME)
+					String.format("rmi://%s:%s/%s", args[0], args[1], sb.toString())
 			);
 			
 			// to create all accounts
 			createAccounts(bankServer, 100);
 			
-			// to deposite montey in all accounts
-			depositAllAccounts(bankServer, 100);
-			
-			// to check balances of all accounts
-			checkBalances(bankServer);
-			
-			// perform transfers between accounts
-			spawnThreads(bankServer, Integer.parseInt(args[2]), Integer.parseInt(args[3]));
-			
-			// check balance in the end
-			checkBalances(bankServer);
-			
+			/*
+			 * // to deposite montey in all accounts depositAllAccounts(bankServer, 100);
+			 * 
+			 * // to check balances of all accounts checkBalances(bankServer);
+			 * 
+			 * // perform transfers between accounts spawnThreads(bankServer,
+			 * Integer.parseInt(args[2]), Integer.parseInt(args[3]));
+			 * 
+			 * // check balance in the end checkBalances(bankServer);
+			 */
 		} catch (MalformedURLException | RemoteException | NotBoundException e) {
 			logger.severe("Couldn't establish RMI registry connection.");
 			logger.severe(e.getMessage());
