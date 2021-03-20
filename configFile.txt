@@ -1,0 +1,4 @@
+Hostname SERVER-ID RMI registry 
+alpha.cselabs.umn.edu 0 5000 
+beta.cselabs.umn.eedu 1 5000
+delta.cselabs.umn.edu 2 5000 

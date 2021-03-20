@@ -16,13 +16,13 @@ public class RMIClientThread implements Runnable {
 	
 	public static final Logger logger = Logger.getLogger(Logger.GLOBAL_LOGGER_NAME);
 
-	private RMIBankSession session; // one session per client thread
+	private RMIBankServer bankServer; // one session per client thread
 	private List<Integer> accountIds;
 	private int iterationCount;
 	private Random random;
 
-	public RMIClientThread(RMIBankSession bankServer, List<Integer> accountIds, int iterationCount) {
-		this.session = bankServer;
+	public RMIClientThread(RMIBankServer bankServer, List<Integer> accountIds, int iterationCount) {
+		this.bankServer = bankServer;
 		this.accountIds = accountIds;
 		this.iterationCount = iterationCount;
 		this.random = new Random();
@@ -42,7 +42,7 @@ public class RMIClientThread implements Runnable {
 			
 			try {
 				// Transfer 10$ from first account to second account
-				String status = session.transferRMI(first, second, 10);
+				String status = bankServer.transferRMI(first, second, 10);
 				
 				// log the transaction status.
 				if(status.equals(Constants.FAIL_STATUS)) {

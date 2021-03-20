@@ -10,6 +10,15 @@ import java.rmi.Remote;
 import java.rmi.RemoteException;
 //Bank Server application that is exposed via the RMI registry
 public interface RMIBankServer extends Remote {
-	// returns a banksession RMI interface that can be used to get a server thread
-	RMIBankSession login() throws RemoteException;
+	// helps us create an account in the bank server
+	int createAccountRMI() throws RemoteException;
+	
+	// helps us deposit money in a bank account
+	String depositRMI(int uid, int amount) throws RemoteException;
+	
+	// helps us get the balance of a bank account
+	int getBalanceRMI(int uid) throws RemoteException;
+	
+	// helps us transfer money between bank accounts
+	String transferRMI(int sourceId, int targetId, int amount) throws RemoteException;
 }

@@ -24,7 +24,6 @@ public interface RMIBankSession extends Remote {
 	// helps us transfer money between bank accounts
 	String transferRMI(int sourceId, int targetId, int amount) throws RemoteException;
 	
-	
 	// called at the client end when the client is done sending requests
 	// we achieve the closing of an RMI thread by calling logout which unexports the object instance
 	 void logout() throws RemoteException;
