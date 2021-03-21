@@ -2,6 +2,7 @@ import java.time.LocalDateTime;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.PriorityQueue;
+import java.util.concurrent.PriorityBlockingQueue;
 import java.util.logging.Logger;
 
 /*******************************************************************************
@@ -19,15 +20,15 @@ public class ExecuteHandler {
 	
 	protected Hashtable<Integer, BankAccount> accounts;
 
-	private PriorityQueue<Message> lamportQueue;
+	private PriorityBlockingQueue<Message> lamportQueue;
 	
 	/*
 	 * Each thread calls its own request handler object.
 	 */
-	public ExecuteHandler(Hashtable<Integer, BankAccount> accounts, int serverId, PriorityQueue<Message> lamportQueue) {
+	public ExecuteHandler(Hashtable<Integer, BankAccount> accounts, int serverId, PriorityBlockingQueue<Message> lamportQueue2) {
 		this.accounts = accounts;
 		this.serverId = serverId;
-		this.lamportQueue = lamportQueue;
+		this.lamportQueue = lamportQueue2;
 	}
 	
 	/*

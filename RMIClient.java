@@ -16,6 +16,7 @@ import java.rmi.RemoteException;
 import java.time.LocalDateTime;
 import java.util.AbstractMap;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -35,6 +36,8 @@ public class RMIClient {
 	private static List<RMIBankServer> serverStubs = new ArrayList<>();
 	
 	static Random random = new Random();
+
+	private static List<Long> serviceTimes;
 
 	public static void main(String[] args) throws SecurityException, IOException, InterruptedException{
 		if (args.length != 3)
@@ -56,6 +59,7 @@ public class RMIClient {
         connectToCluster(serverInfo);
 
         accountIds = new ArrayList<Integer>();
+        serviceTimes = Collections.synchronizedList(new ArrayList<>());
         
         System.setProperty("java.security.policy","file:./security.policy");
 		
@@ -89,7 +93,7 @@ public class RMIClient {
 		List<Thread> transferThreads = new LinkedList<>();
 		// create threads and create a session for each thread
 		for (int i=0; i<threadCount; i++) {
-			RMIClientThread c = new RMIClientThread(serverStubs, accountIds, iterationCount, clientId); 
+			RMIClientThread c = new RMIClientThread(serverStubs, accountIds, iterationCount, clientId, serviceTimes); 
 			Thread txThread = new Thread(c);
 			txThread.start();
 			transferThreads.add(txThread); 
@@ -103,6 +107,24 @@ public class RMIClient {
 				logger.severe("join failed"); e.printStackTrace();
 			}
 	    }
+		
+		printPerformance(clientId);
+		
+	}
+	
+	private static void printPerformance(int clientId) {
+		logger.info("---- Performance Experiment (Client) ----");
+		logger.info(String.format("Number of server replicas: %d", serverStubs.size()+1));
+		
+		double serviceTimeSum = 0;
+		for(long time : serviceTimes) {
+			serviceTimeSum += time;
+		}
+		double avg = serviceTimeSum / (double) serviceTimes.size();
+		double seconds = avg / 1_000_000_000.0;
+		
+		logger.info(String.format("Average processing time seen by  Client-%d is %5.4f secs", 
+				clientId, seconds));
 	}
 	
 	private static void sendHalt(int clientId) throws RemoteException {

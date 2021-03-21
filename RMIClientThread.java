@@ -24,12 +24,15 @@ public class RMIClientThread implements Runnable {
 	
 	private int clientId;
 
-	public RMIClientThread(List<RMIBankServer> serverStubs, List<Integer> accountIds, int iterationCount, int clientId) {
+	private List<Long> serviceTimes;
+
+	public RMIClientThread(List<RMIBankServer> serverStubs, List<Integer> accountIds, int iterationCount, int clientId, List<Long> times) {
 		this.serverStubs = serverStubs;
 		this.accountIds = accountIds;
 		this.iterationCount = iterationCount;
 		this.random = new Random();
 		this.clientId = clientId;
+		this.serviceTimes = times;
 	}
 
 	@Override
@@ -54,8 +57,13 @@ public class RMIClientThread implements Runnable {
 						clientId, randomIndex, LocalDateTime.now(), Constants.TRANSFER_MESSAGE, 
 						String.format("from:%d to:%d amt:%d", first, second, amount)));
 				
+				long t0 = System.nanoTime(); 
+				
 				// Transfer 10$ from first account to second account
 				String status = bankServer.transferRMI(first, second, amount);
+				
+				long elapsed = System.nanoTime() - t0; 
+				this.serviceTimes.add(elapsed);
 				
 				// log the transaction status
 				logger.info(String.format(Constants.CLIENT_RSP_LOG, 

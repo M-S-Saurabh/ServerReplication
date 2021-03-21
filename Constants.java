@@ -9,12 +9,12 @@
 
 public final class Constants {
 	// Sever init constants
-	public static final int NUM_ACCOUNTS = 10;
+	public static final int NUM_ACCOUNTS = 20;
 	public static final int INIT_BALANCE = 1000;
 	
 	// Client thread constants
 	public static final int TRANSFER_AMOUNT = 10;
-	public static final int NUM_TRANSFERS = 10;
+	public static final int NUM_TRANSFERS = 200;
 
 	private Constants() {
 		// restrict instantiation

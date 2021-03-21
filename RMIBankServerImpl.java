@@ -32,6 +32,8 @@ import java.util.logging.FileHandler;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 import java.util.Scanner;
+import java.util.concurrent.PriorityBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 public class RMIBankServerImpl extends UnicastRemoteObject implements RMIBankServer {
 
@@ -41,7 +43,7 @@ public class RMIBankServerImpl extends UnicastRemoteObject implements RMIBankSer
 
 	private List<RMIBankServer> serverStubs;
 	
-	private PriorityQueue<Message> lamportQueue;
+	private PriorityBlockingQueue<Message> lamportQueue;
 	
 	private Hashtable<Integer, BankAccount> accounts;
 	
@@ -57,8 +59,10 @@ public class RMIBankServerImpl extends UnicastRemoteObject implements RMIBankSer
 
 	private long serviceTimeSum;
 	private int numServices;
+
+	private String serverName;
 	
-	public RMIBankServerImpl(int serverID, Map<Integer, String[]> serverInfo, int numClients) throws RemoteException {
+	public RMIBankServerImpl(int serverID, String serverName, Map<Integer, String[]> serverInfo, int numClients) throws RemoteException {
 		super();
 		this.initAccounts(Constants.NUM_ACCOUNTS, Constants.INIT_BALANCE);
 		this.serverID = serverID;
@@ -66,8 +70,10 @@ public class RMIBankServerImpl extends UnicastRemoteObject implements RMIBankSer
 		this.receivedHalt = 0;
 		this.numClients = numClients;
 		
+		this.serverName = serverName;
+		
 		this.lamportClock = 0;
-		this.lamportQueue = new PriorityQueue<Message>(1000, new MessageComparator());
+		this.lamportQueue = new PriorityBlockingQueue<Message>(1000, new MessageComparator());
 		
 		this.execHandler = new ExecuteHandler(accounts, serverID, this.lamportQueue);
 		
@@ -118,12 +124,15 @@ public class RMIBankServerImpl extends UnicastRemoteObject implements RMIBankSer
 		 }
 	
 		 // the stub that is exposed via the RMI registry 
-		 RMIBankServer bankStub = (RMIBankServer) UnicastRemoteObject.toStub(new RMIBankServerImpl(serverId, serverInfo, numClients)); 
-		 logger.info(String.format("Using the supplied RMI registry port: %d", RMIRegPort)); 
-		 Registry localRegistry = LocateRegistry.getRegistry(RMIRegPort);
 		 StringBuilder sb = new StringBuilder(Constants.RMI_SERVER_NAME);
 		 sb.append(":").append(serverId);
-		 localRegistry.bind(sb.toString(), bankStub); // setting up
+		 String serverName = sb.toString();
+		 
+		 RMIBankServer bankStub = (RMIBankServer) UnicastRemoteObject.toStub(new RMIBankServerImpl(serverId, serverName, serverInfo, numClients)); 
+		 logger.info(String.format("Using the supplied RMI registry port: %d", RMIRegPort)); 
+		 Registry localRegistry = LocateRegistry.getRegistry(RMIRegPort);
+		 
+		 localRegistry.bind(serverName, bankStub); // setting up
 	}
 
 	
@@ -178,7 +187,7 @@ public class RMIBankServerImpl extends UnicastRemoteObject implements RMIBankSer
 				sb.append(":").append(sID);
 				String serverName = sb.toString();
 				logger.info("Connecting to "+serverName);
-				int count = 10;
+				int count = 20;
 				while (stub == null && count-- > 0) {
 					try { // trying to get the bankserver stub from the RMI registry
 						Thread.sleep(3000); // possibly increase the sleep time if cluster is taking time to form
@@ -221,17 +230,12 @@ public class RMIBankServerImpl extends UnicastRemoteObject implements RMIBankSer
 	}
 
 	private void waitForQueue(Message message) {
-		System.out.println("Waiting for:"+message.toString());
+//		System.out.println("Waiting for:"+message.toString());
 		Message front = this.lamportQueue.peek();
-		System.out.println("Wait on :"+front.toString());
+//		System.out.println("Wait on :"+front.toString());
 		// Wait for the message to be front of queue.
 		while(!this.lamportQueue.peek().equals(message)) {
 			front = this.lamportQueue.peek();
-//			try {
-//				Thread.sleep(10);
-//			} catch (InterruptedException e) {
-//				e.printStackTrace();
-//			}
 		}
 	}
 	
@@ -368,27 +372,35 @@ public class RMIBankServerImpl extends UnicastRemoteObject implements RMIBankSer
 			printBalances();
 			printPerformance();
 			
-			String serverName = String.format("%s:%s", Constants.RMI_SERVER_NAME, this.serverID);
 	        // Unregister ourself
-	        Naming.unbind(serverName);
+			Registry localRegistry = LocateRegistry.getRegistry(RMIRegPort);
+	        localRegistry.unbind(serverName);
+	        
 	        // Unexport; this will also remove us from the RMI runtime
 	        UnicastRemoteObject.unexportObject(this, true);
 	        logger.info(String.format("Server-%d has exited.", this.serverID));
+	        
+	        return;
 	    }
-	    catch(Exception e){}
+	    catch(Exception e){
+	    	e.printStackTrace();
+	    }
 	}
 
 	private void printPerformance() {
-		logger.info(String.format("Number of server replicas:", 
+		logger.info("---- Performance Experiment ----");
+		logger.info(String.format("Number of server replicas: %d", 
 				this.serverStubs.size()+1));
 		
-		long avg = this.serviceTimeSum / this.numServices;
-		logger.info(String.format("Average service processing time for Server-%d is %d ns", 
-				this.serverID, avg));
+		double avg = (double)this.serviceTimeSum / (double)this.numServices;
+		double seconds = avg / 1_000_000_000.0;
+		
+		logger.info(String.format("Average service processing time for Server-%d is %5.4f secs", 
+				this.serverID, seconds));
 	}
 
 	private void pendingRequests() {
-		logger.info(String.format("Pending requests in Server-%d :",this.serverID));
+		logger.info(String.format("---- Pending requests in Server-%d :",this.serverID));
 		if(this.lamportQueue.size() == 0) {
 			logger.info("--None--");
 		}
@@ -398,9 +410,10 @@ public class RMIBankServerImpl extends UnicastRemoteObject implements RMIBankSer
 	}
 
 	private void printBalances() {
+		logger.info("---- Printing Balances ----");
 		int totalBalance = 0;
 		for(int i=0; i<accounts.size(); i++) {
-			int balance = accounts.get(i).getBalance();
+			int balance = accounts.get(i+1).getBalance();
 			logger.info(String.format("Final balance in accountId:%d is %d", i, balance));
 			totalBalance += balance;
 		}
