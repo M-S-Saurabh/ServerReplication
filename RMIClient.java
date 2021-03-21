@@ -43,16 +43,17 @@ public class RMIClient {
 		if (args.length != 3)
 			throw new RuntimeException ("Syntax: RMIClient <clientID> <threadCount> <config-file-name>");
 		
+		// Parsing arguments
+        int clientId = Integer.parseInt(args[0]);
+        int threadCount = Integer.parseInt(args[1]);
+		
 		// This block configure the logger with handler and formatter  
-        FileHandler fh = new FileHandler("./logs/RMI_clientLogfile.log");  
+        FileHandler fh = new FileHandler(String.format("./logs/Client-%d.log", clientId));  
         logger.addHandler(fh);
         System.setProperty("java.util.logging.SimpleFormatter.format", Constants.LOG_FORMAT);
         SimpleFormatter formatter = new SimpleFormatter();  
         fh.setFormatter(formatter);
         
-        // Parsing arguments
-        int clientId = Integer.parseInt(args[0]);
-        int threadCount = Integer.parseInt(args[1]);
         Map<Integer, String[]> serverInfo = parseConfigFile(args[2]);
         
         // Connecting to servers.
