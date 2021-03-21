@@ -51,6 +51,9 @@ KNOWN BUGS:
 
 - However, all Java processes exit gracefully.
 
+- If rmiregistry is already running on the machine,
+  python script may throw an error briefly but it will still continue all operations normally.
+
 - Before running client process, we have to wait for server processes to complete connection forming phase.
   Wait for a message from all server processes, which says:
 	"---- Server Initialization complete. Ready for client messages. ----"
