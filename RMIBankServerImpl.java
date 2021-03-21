@@ -17,12 +17,14 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Random;
 import java.util.Map.Entry;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Hashtable;
+import java.util.Iterator;
 import java.util.List;
 import java.util.LinkedList;
 import java.util.PriorityQueue;
@@ -46,37 +48,66 @@ public class RMIBankServerImpl extends UnicastRemoteObject implements RMIBankSer
 	private int lamportClock;
 
 	private int serverID;
-	
-	private int simpleCounter; // TODO for intitial debugging remove later
 
-	public RMIBankServerImpl(int serverID, Map<Integer, String[]> serverInfo) throws RemoteException {
+	private ExecuteHandler execHandler;
+
+	private int receivedHalt;
+
+	private int numClients;
+
+	private long serviceTimeSum;
+	private int numServices;
+	
+	public RMIBankServerImpl(int serverID, Map<Integer, String[]> serverInfo, int numClients) throws RemoteException {
 		super();
-		this.accounts = new Hashtable<Integer, BankAccount>(100);
+		this.initAccounts(Constants.NUM_ACCOUNTS, Constants.INIT_BALANCE);
 		this.serverID = serverID;
 		this.serverStubs = new LinkedList<>();
+		this.receivedHalt = 0;
+		this.numClients = numClients;
+		
 		this.lamportClock = 0;
-		this.simpleCounter = 0;
-		this.lamportQueue = new PriorityQueue<Message>((a,b)->Integer.compare(a.getTimeStamp(), b.getTimeStamp()));
+		this.lamportQueue = new PriorityQueue<Message>(1000, new MessageComparator());
+		
+		this.execHandler = new ExecuteHandler(accounts, serverID, this.lamportQueue);
+		
+		this.serviceTimeSum = 0;
+		this.numServices = 0;
+		
 		Thread postConstruct = new Thread(new ConnectToCluster(serverID, serverInfo, serverStubs));
 		postConstruct.start();
 	}
 
+	private void initAccounts(int numAccounts, int initBalance) {
+		this.accounts = new Hashtable<Integer, BankAccount>(numAccounts);
+		for(int i=0; i<numAccounts; i++) {
+			// Create account
+			BankAccount newAccount = new BankAccount();
+			// Set initial balance
+			newAccount.setBalance(initBalance);
+			// Store in hash table
+	        this.accounts.put(newAccount.UID, newAccount);
+		}
+	}
+
 	public static void main(String[] args) throws SecurityException, IOException, AlreadyBoundException {
-		if (args.length != 2) {
-			throw new RuntimeException("Syntax: RMIBankServerImpl <server ID> <configFile>");
+		if (args.length != 3) {
+			throw new RuntimeException("Syntax: RMIBankServerImpl <server ID> <configFile> <numClients>");
 		}
 
-		int ID = Integer.parseInt(args[0]);
+		int serverId = Integer.parseInt(args[0]);
+		int numClients = Integer.parseInt(args[2]);
 
-		System.out.println(InetAddress.getLocalHost().getHostName());
+		System.out.println(String.format("Hostname is %s", InetAddress.getLocalHost().getHostName()));
 
-		Map<Integer, String[]> serverInfo = parseConfigFile(args[1], ID);
+		Map<Integer, String[]> serverInfo = parseConfigFile(args[1], serverId);
 
 		 // This block configure the logger with handler and formatter FileHandler fh
-		 FileHandler fh = new FileHandler("./logs/RMI_serverLogfile.log");
+		 FileHandler fh = new FileHandler(String.format("./logs/Server-%d.log", serverId));
 		 logger.addHandler(fh);
 		 System.setProperty("java.util.logging.SimpleFormatter.format",
-		 Constants.LOG_FORMAT); SimpleFormatter formatter = new SimpleFormatter();
+		 Constants.LOG_FORMAT); 
+		 SimpleFormatter formatter = new SimpleFormatter();
 		 fh.setFormatter(formatter);
 		 
 		 // setting the security policy
@@ -87,11 +118,11 @@ public class RMIBankServerImpl extends UnicastRemoteObject implements RMIBankSer
 		 }
 	
 		 // the stub that is exposed via the RMI registry 
-		 RMIBankServer bankStub = (RMIBankServer) UnicastRemoteObject.toStub(new RMIBankServerImpl(ID, serverInfo)); 
-		 logger.severe(String.format("Using the supplied RMI registry port: %d", RMIRegPort)); 
+		 RMIBankServer bankStub = (RMIBankServer) UnicastRemoteObject.toStub(new RMIBankServerImpl(serverId, serverInfo, numClients)); 
+		 logger.info(String.format("Using the supplied RMI registry port: %d", RMIRegPort)); 
 		 Registry localRegistry = LocateRegistry.getRegistry(RMIRegPort);
 		 StringBuilder sb = new StringBuilder(Constants.RMI_SERVER_NAME);
-		 sb.append(":").append(ID);
+		 sb.append(":").append(serverId);
 		 localRegistry.bind(sb.toString(), bankStub); // setting up
 	}
 
@@ -136,7 +167,7 @@ public class RMIBankServerImpl extends UnicastRemoteObject implements RMIBankSer
 		}
 
 		public void run() {
-			System.out.println("Server:" + this.serverId + " is Trying to Connect to Cluster");
+			logger.info("Server-" + this.serverId + " is Trying to Connect to Cluster");
 			for (Map.Entry<Integer, String[]> entry: serverInfo.entrySet()) {
 				RMIBankServer stub = null;
 				int sID = entry.getKey();
@@ -146,78 +177,234 @@ public class RMIBankServerImpl extends UnicastRemoteObject implements RMIBankSer
 				StringBuilder sb = new StringBuilder(Constants.RMI_SERVER_NAME);
 				sb.append(":").append(sID);
 				String serverName = sb.toString();
-				System.out.println("Connecting to:"+serverName);
+				logger.info("Connecting to "+serverName);
 				int count = 10;
 				while (stub == null && count-- > 0) {
 					try { // trying to get the bankserver stub from the RMI registry
 						Thread.sleep(3000); // possibly increase the sleep time if cluster is taking time to form
 						stub = (RMIBankServer) Naming.lookup(
 								String.format("rmi://%s:%s/%s", hostName, rmiPort, serverName));
-						System.out.println("stub received for:"+serverName);
+						logger.info("Server-stub received for "+serverName);
 						serverStubs.add(stub);
 					} catch (Exception e) {
-						System.out.println("retrying connecting to:"+serverName);
+						logger.info("Retry connecting to "+serverName);
 					}
 				}
 			}
-			System.out.println("size of serverStubs "+serverStubs.size());
+			logger.info("Connection trials complete. No of RMI stubs is "+serverStubs.size());
+			logger.info("---- Server Initialization complete. Ready for client messages. ----");
+		}
+	}
+	
+	private void advanceClock() {
+		this.lamportClock += 1;
+	}
+	
+	private void setClock( int newTime) {
+		this.lamportClock = newTime;
+	}
+	
+	private int getClock() {
+		return this.lamportClock;
+	}
+	
+	private void sendMulticast(Message message) throws RemoteException {
+		for (RMIBankServer server: serverStubs) {
+			Message ack = server.receiveMulticast(message);
+//			this.lamportQueue.add(ack);
+			
+			// Log the server message
+			logger.info(String.format(Constants.SERVER_MSG_LOG, 
+					this.serverID, Constants.SERVER_REQ, LocalDateTime.now(),
+					ack.getTimeStamp(), ack.getServerId(), ack.getType(), ack.getRequest()));
 		}
 	}
 
+	private void waitForQueue(Message message) {
+		System.out.println("Waiting for:"+message.toString());
+		Message front = this.lamportQueue.peek();
+		System.out.println("Wait on :"+front.toString());
+		// Wait for the message to be front of queue.
+		while(!this.lamportQueue.peek().equals(message)) {
+			front = this.lamportQueue.peek();
+//			try {
+//				Thread.sleep(10);
+//			} catch (InterruptedException e) {
+//				e.printStackTrace();
+//			}
+		}
+	}
+	
+	private int messageRoutine(Message message) throws RemoteException {
+		// Enqueue the client message in current process.
+		this.lamportQueue.add(message);
+		
+		// Multicast this message to other servers
+		this.sendMulticast(message);
+		
+		waitForQueue(message);
+		
+		// Increment clock and Multicast this message to other servers
+		this.advanceClock();
+		Message execMessage = new ExecuteMessage(this.serverID, this.getClock(), Constants.EXECUTE_MESSAGE, message);
+		this.sendMulticast(execMessage);
+
+		// Execute the message
+		this.advanceClock();
+		int response = this.execHandler.execute(message);
+				
+		return response;
+	}
+	
 	@Override
 	public int createAccountRMI() throws RemoteException {
-		CreateMessage message = new CreateMessage(++this.lamportClock, Constants.CREATE_MESSAGE, new LinkedList<>(Arrays.asList(this.simpleCounter++)));
-		this.lamportQueue.add(message);
-		for (RMIBankServer server: serverStubs) {
-			server.multicast(message);
-		}
-		/*
-		 * BankAccount newAccount = new BankAccount();
-		 * logger.info("New Account created uid: " + newAccount.UID);
-		 * accounts.put(newAccount.UID, newAccount); return newAccount.UID;
-		 */
-		return 0;
+		// Increment clock on receiving message.
+		this.advanceClock();
+		
+		// Log the client message
+		logger.info(String.format(Constants.SERVER_MSG_LOG, 
+				this.serverID, Constants.CLIENT_REQ, LocalDateTime.now(),
+				this.getClock(), this.serverID, Constants.CREATE_MESSAGE, ""));
+		
+		CreateMessage message = new CreateMessage(this.serverID, this.getClock());
+		int uid = messageRoutine(message); 
+		return uid;
 	}
 
 	@Override
 	public String depositRMI(int uid, int amount) throws RemoteException {
-		BankAccount account = accounts.get(uid);
-		account.setBalance(account.getBalance() + amount);
-		logger.info("deposite amount: " + amount + " to uid:" + account.UID + " with status:" + Constants.OK_STATUS);
+		// Increment clock on receiving message.
+		this.advanceClock();
+		DepositMessage message = new DepositMessage(this.serverID, this.getClock(), uid, amount);
+		int response = messageRoutine(message);
+		
+		logger.info("Deposited amount: " + amount + " to uid:" + uid + " with status:" + Constants.OK_STATUS);
 		return Constants.OK_STATUS;
 	}
 
 	@Override
 	public int getBalanceRMI(int uid) throws RemoteException {
-		BankAccount account = accounts.get(uid);
-		if (account == null) {
-			logger.severe(String.format("Acccount with id:%d could not be found.", uid));
+		// Increment clock on receiving message.
+		this.advanceClock();
+		CheckMessage message = new CheckMessage(this.serverID, this.getClock(), uid);
+		int balance = messageRoutine(message);
+		
+		if (balance < 0) {
+			logger.severe(String.format("Acccount with id:%d balance is invalid.", uid));
 			return -1;
 		} else {
-			return account.getBalance();
+			return balance;
 		}
 	}
 
 	@Override
 	public String transferRMI(int sourceId, int targetId, int amount) throws RemoteException {
-		BankAccount source = accounts.get(sourceId);
-		BankAccount target = accounts.get(targetId);
-		if (source.getBalance() < amount) {
-			logger.severe(String.format("Transfer failed: %s", Constants.INSUFFICIENT_BALANCE));
-			return Constants.FAIL_STATUS;
-		} else {
-			source.setBalance(source.getBalance() - amount);
-			target.setBalance(target.getBalance() + amount);
-			logger.info("transfer amount: " + amount + " from uid:" + sourceId + " to uid:" + targetId + " with status:"
-					+ Constants.OK_STATUS);
+		long t0 = System.nanoTime(); 
+		
+		// Log the client message
+		logger.info(String.format(Constants.SERVER_MSG_LOG, 
+				this.serverID, Constants.CLIENT_REQ, LocalDateTime.now(),
+				this.getClock(), this.serverID, Constants.TRANSFER_MESSAGE, 
+				String.format("[%d, %d, %d]", sourceId, targetId, amount)));
+		
+		// Increment clock on receiving message.
+		this.advanceClock();
+		TransferMessage message = new TransferMessage(this.serverID, this.getClock(), sourceId, targetId, amount);
+		int balance = messageRoutine(message);
+		
+		long serviceTime = (System.nanoTime() - t0);
+		this.serviceTimeSum += serviceTime;
+		this.numServices++;
+		
+		if(balance < 0) {
+			return Constants.INSUFFICIENT_BALANCE;
+		}else {
 			return Constants.OK_STATUS;
 		}
 	}
 	
 	@Override
-	public void multicast(Message message) {
-		//System.out.println("message recived at server: "+this.serverID+"for account: "+message.getRequest().get(0));
-		System.out.println("message recived at server: "+this.serverID+" type:"+ message.getType() +"for account: "+message.getRequest().get(0));
+	public Message receiveMulticast(Message message) {
+		// Advance the local clock
+		int newTime = Math.max(message.getTimeStamp(), this.getClock()) + 1;
+		this.setClock(newTime);
+		
+		// Log the server message
+		logger.info(String.format(Constants.SERVER_MSG_LOG, 
+				this.serverID, Constants.SERVER_REQ, LocalDateTime.now(),
+				message.getTimeStamp(), message.getServerId(), message.getType(), message.getRequest()));
+		
+		if(message.getType().equals(Constants.EXECUTE_MESSAGE)) {
+			// Execute the message
+			Message toExec = ((ExecuteMessage) message).getExecMessage();
+			this.execHandler.execute(toExec);
+		}else {
+			// Put in local queue.
+			this.lamportQueue.add(message);
+		}
+		
+		// Send an Ack with current timestamp
+		Message ack = new AckMessage(this.serverID, this.getClock(),
+				Constants.ACK_MESSAGE, message.getTimeStamp(), message.getServerId());
+		return ack;
+	}
+
+	@Override
+	public String clientHalt(int clientId) throws RemoteException {
+		this.receivedHalt += 1;
+		if(this.receivedHalt == this.numClients) {
+			for (RMIBankServer server: serverStubs) {
+				server.serverHalt();
+			}
+			this.serverHalt();
+		}
+		return Constants.OK_STATUS;
+	}
+
+	@Override
+	public void serverHalt() throws RemoteException {
+		try{
+			pendingRequests();
+			printBalances();
+			printPerformance();
+			
+			String serverName = String.format("%s:%s", Constants.RMI_SERVER_NAME, this.serverID);
+	        // Unregister ourself
+	        Naming.unbind(serverName);
+	        // Unexport; this will also remove us from the RMI runtime
+	        UnicastRemoteObject.unexportObject(this, true);
+	        logger.info(String.format("Server-%d has exited.", this.serverID));
+	    }
+	    catch(Exception e){}
+	}
+
+	private void printPerformance() {
+		logger.info(String.format("Number of server replicas:", 
+				this.serverStubs.size()+1));
+		
+		long avg = this.serviceTimeSum / this.numServices;
+		logger.info(String.format("Average service processing time for Server-%d is %d ns", 
+				this.serverID, avg));
+	}
+
+	private void pendingRequests() {
+		logger.info(String.format("Pending requests in Server-%d :",this.serverID));
+		if(this.lamportQueue.size() == 0) {
+			logger.info("--None--");
+		}
+		for(Message msg : this.lamportQueue) {
+			logger.info(msg.toString());
+		}
+	}
+
+	private void printBalances() {
+		int totalBalance = 0;
+		for(int i=0; i<accounts.size(); i++) {
+			int balance = accounts.get(i).getBalance();
+			logger.info(String.format("Final balance in accountId:%d is %d", i, balance));
+			totalBalance += balance;
+		}
+		logger.info(String.format("Sun of balances in all accounts is %d", totalBalance));
 	}
 
 }

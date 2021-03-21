@@ -7,6 +7,7 @@
 
 
 import java.rmi.RemoteException;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Random;
 import java.util.logging.Logger;
@@ -16,21 +17,28 @@ public class RMIClientThread implements Runnable {
 	
 	public static final Logger logger = Logger.getLogger(Logger.GLOBAL_LOGGER_NAME);
 
-	private RMIBankServer bankServer; // one session per client thread
+	private List<RMIBankServer> serverStubs; // one session per client thread
 	private List<Integer> accountIds;
 	private int iterationCount;
 	private Random random;
+	
+	private int clientId;
 
-	public RMIClientThread(RMIBankServer bankServer, List<Integer> accountIds, int iterationCount) {
-		this.bankServer = bankServer;
+	public RMIClientThread(List<RMIBankServer> serverStubs, List<Integer> accountIds, int iterationCount, int clientId) {
+		this.serverStubs = serverStubs;
 		this.accountIds = accountIds;
 		this.iterationCount = iterationCount;
 		this.random = new Random();
+		this.clientId = clientId;
 	}
 
 	@Override
 	public void run() {
 		for(int i=0; i<iterationCount; i++) {
+			// Pick a random server.
+			int randomIndex = random.nextInt(serverStubs.size());
+			RMIBankServer bankServer = serverStubs.get(randomIndex);
+			
 			// Pick a random element from list.
 			int first = accountIds.get(random.nextInt(accountIds.size()));
 			
@@ -39,21 +47,22 @@ public class RMIClientThread implements Runnable {
 			while(second == first) {
 				second = accountIds.get(random.nextInt(accountIds.size()));
 			}
+			int amount = Constants.TRANSFER_AMOUNT;
 			
 			try {
-				// Transfer 10$ from first account to second account
-				String status = bankServer.transferRMI(first, second, 10);
+				logger.info(String.format(Constants.CLIENT_REQ_LOG, 
+						clientId, randomIndex, LocalDateTime.now(), Constants.TRANSFER_MESSAGE, 
+						String.format("from:%d to:%d amt:%d", first, second, amount)));
 				
-				// log the transaction status.
-				if(status.equals(Constants.FAIL_STATUS)) {
-					logger.severe(String.format("Transfer request failed. SourceID:%d TargetID:%d", first, second));
-					logger.severe(String.format("Failure Reason: %s", Constants.INSUFFICIENT_BALANCE));
-				}else {
-					logger.info(String.format("Transfer of 10$ from id:%d to id:%d status:%s", first, second, status));
-				}
+				// Transfer 10$ from first account to second account
+				String status = bankServer.transferRMI(first, second, amount);
+				
+				// log the transaction status
+				logger.info(String.format(Constants.CLIENT_RSP_LOG, 
+						clientId, randomIndex, LocalDateTime.now(), status));
 				
 			} catch (RemoteException e) {
-				logger.severe("Couldn't invoke partB transfer method.");
+				logger.severe("Couldn't invoke transfer method.");
 				logger.severe(e.getMessage());
 				e.printStackTrace();
 			}

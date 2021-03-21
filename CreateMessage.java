@@ -5,14 +5,16 @@
  * Edwin Nellickal (nelli053@umn.edu)
  ******************************************************************************/
 
+import java.util.Hashtable;
+import java.util.LinkedList;
 import java.util.List;
 
 public class CreateMessage extends Message {
-	CreateMessage(int lamportClock, String type, List<Integer> request) {
-		super(lamportClock, type, request);
+	CreateMessage(int serverId, int lamportClock) {
+		super(serverId, lamportClock, Constants.CREATE_MESSAGE, new LinkedList<>());
 	}
 	
-	public int getAccount() {
-		return this.request.get(0);
-	}
+//	public int getAccount() {
+//		return this.request.get(0);
+//	}
 }

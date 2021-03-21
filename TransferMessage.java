@@ -4,11 +4,15 @@
  * Saurabh Mylavaram (mylav008@umn.edu)
  * Edwin Nellickal (nelli053@umn.edu)
  ******************************************************************************/
+import java.util.LinkedList;
 import java.util.List;
 
 public class TransferMessage extends Message {
-	TransferMessage(int lamportClock, String type, List<Integer> request) {
-		super(lamportClock, type, request);
+	TransferMessage(int serverId, int lamportClock, int sourceId, int targetId, int amount) {
+		super(serverId, lamportClock, Constants.TRANSFER_MESSAGE, new LinkedList<>());
+		this.request.add(sourceId);
+		this.request.add(targetId);
+		this.request.add(amount);
 	}
 	
 	public int getFromAccount() {

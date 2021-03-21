@@ -8,12 +8,28 @@
 
 
 public final class Constants {
+	// Sever init constants
+	public static final int NUM_ACCOUNTS = 10;
+	public static final int INIT_BALANCE = 1000;
+	
+	// Client thread constants
+	public static final int TRANSFER_AMOUNT = 10;
+	public static final int NUM_TRANSFERS = 10;
+
 	private Constants() {
 		// restrict instantiation
 	}
 	
 	// Logging related
-	public static final String LOG_FORMAT = "%1$tF %1$tT %4$s %2$s %5$s%6$s%n";
+	public static final String LOG_FORMAT = "%5$s%6$s%n";
+	
+	public static final String SERVER_MSG_LOG = "Server-%d %s %s [%d, %d] %s %s";
+	public static final String CLIENT_REQ = "CLIENT-REQ";
+	public static final String SERVER_REQ = "SRV-REQ";
+	public static final String REQ_PROCESSING = "REQ_PROCESSING";
+	
+	public static final String CLIENT_REQ_LOG = "CLNT-%d SRV-%d REQ %s %s %s";
+	public static final String CLIENT_RSP_LOG = "CLNT-%d SRV-%d RSP %s %s";
 	
 	// Status message strings
 	public static final String OK_STATUS = "OK";
@@ -22,6 +38,8 @@ public final class Constants {
 	public static final String DEPOSIT_MESSAGE = "DEPOSIT";
 	public static final String CHECK_MESSAGE = "CHECK";
 	public static final String TRANSFER_MESSAGE = "TRANSFER";
+	public static final String ACK_MESSAGE = "ACK";
+	public static final String EXECUTE_MESSAGE = "EXECUTE";
 	
 	// Failure reason strings
 	public static final String INSUFFICIENT_BALANCE = "In-sufficient balance in source account.";
@@ -33,6 +51,7 @@ public final class Constants {
 		CREATE, 
 		DEPOSTI,
 		CHECK, 
-		TRANSFER
+		TRANSFER,
+		ACK
 	};
 }

@@ -5,12 +5,14 @@
  * Edwin Nellickal (nelli053@umn.edu)
  ******************************************************************************/
 
+import java.util.LinkedList;
 import java.util.List;
 
 public class CheckMessage extends Message {
 	
-	CheckMessage(int lamportClock, String type, List<Integer> request) {
-		super(lamportClock, type, request);
+	CheckMessage(int serverId, int lamportClock, int uid) {
+		super(serverId, lamportClock, Constants.CHECK_MESSAGE, new LinkedList<>());
+		this.request.add(uid);
 	}
 	
 	public int getAccount() {
