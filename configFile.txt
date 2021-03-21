@@ -1,4 +1,4 @@
-Hostname SERVER-ID RMI registry 
-MSI 0 5000
-MSI 1 5000
-MSI 2 5000
+Hostname SERVER-ID RMI registry
+csel-kh1260-01 0 5000
+csel-kh1260-02 1 5000
+csel-kh1260-03 2 5000
