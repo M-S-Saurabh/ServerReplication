@@ -1,6 +1,6 @@
 Hostname SERVER-ID RMI registry
-csel-kh1260-01 0 5000
-csel-kh1260-02 1 5000
-csel-kh1260-03 2 5000
-csel-kh1260-04 3 5000
-csel-kh1260-05 4 5000
+MSI 0 5000
+MSI 1 5000
+MSI 2 5000
+MSI 3 5000
+MSI 4 5000

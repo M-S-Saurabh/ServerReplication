@@ -251,11 +251,15 @@ public class RMIBankServerImpl extends UnicastRemoteObject implements RMIBankSer
 		// Increment clock and Multicast this message to other servers
 		this.advanceClock();
 		Message execMessage = new ExecuteMessage(this.serverID, this.getClock(), Constants.EXECUTE_MESSAGE, message);
+		logger.info(String.format(Constants.SERVER_MSG_LOG, 
+				this.serverID, Constants.SERVER_REQ, LocalDateTime.now(),
+				execMessage.getTimeStamp(), execMessage.getServerId(), execMessage.getType(), execMessage.getRequest()));
+		
 		this.sendMulticast(execMessage);
 
 		// Execute the message
-		this.advanceClock();
 		int response = this.execHandler.execute(message);
+		this.advanceClock();
 				
 		return response;
 	}
