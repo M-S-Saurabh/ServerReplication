@@ -1,3 +1,4 @@
+package message;
 /*******************************************************************************
  * Authors:
  * ---------
@@ -6,7 +7,6 @@
  ******************************************************************************/
 
 import java.io.Serializable;
-import java.util.Comparator;
 import java.util.Hashtable;
 import java.util.List;
 
@@ -33,23 +33,23 @@ public class Message implements Serializable  {
 		return (this.messageId == msg.messageId) && (this.serverId == msg.serverId);
 	}
 	
-	int getMessageId() {
+	public int getMessageId() {
 		return this.messageId;
 	}
 	
-	int getServerId() {
+	public int getServerId() {
 		return this.serverId;
 	}
 
-	int getTimeStamp() {
+	public int getTimeStamp() {
 		return this.timeStamp;
 	}
 	
-	String getType() {
+	public String getType() {
 		return this.type;
 	}
 	
-	List<Integer> getRequest() {
+	public List<Integer> getRequest() {
 		return this.request;
 	}
 	
@@ -57,18 +57,4 @@ public class Message implements Serializable  {
 	public String toString() {
 		return "Message [timeStamp="+ timeStamp +", pid="+ serverId+", type="+ type + ", request="+ request +"]";
 	}
-}
-
-class MessageComparator implements Comparator<Message>{
-
-	@Override
-	public int compare(Message m1, Message m2) {
-		int timeCompare = Integer.compare(m1.getTimeStamp(), m2.getTimeStamp());
-		if ( timeCompare == 0) {
-			return Integer.compare(m1.getServerId(), m2.getServerId());
-		}else {
-			return timeCompare;
-		}
-	}
-	
 }

@@ -8,6 +8,8 @@
 
 import java.rmi.Remote;
 import java.rmi.RemoteException;
+
+import message.Message;
 //Bank Server application that is exposed via the RMI registry
 public interface RMIBankServer extends Remote {
 	// helps us create an account in the bank server

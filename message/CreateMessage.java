@@ -1,3 +1,4 @@
+package message;
 /*******************************************************************************
  * Authors:
  * ---------
@@ -9,8 +10,10 @@ import java.util.Hashtable;
 import java.util.LinkedList;
 import java.util.List;
 
+import shared.Constants;
+
 public class CreateMessage extends Message {
-	CreateMessage(int serverId, int lamportClock) {
+	public CreateMessage(int serverId, int lamportClock) {
 		super(serverId, lamportClock, Constants.CREATE_MESSAGE, new LinkedList<>());
 	}
 	

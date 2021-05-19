@@ -1,3 +1,4 @@
+package message;
 /*******************************************************************************
  * Authors:
  * ---------
@@ -8,9 +9,11 @@
 import java.util.LinkedList;
 import java.util.List;
 
+import shared.Constants;
+
 public class CheckMessage extends Message {
 	
-	CheckMessage(int serverId, int lamportClock, int uid) {
+	public CheckMessage(int serverId, int lamportClock, int uid) {
 		super(serverId, lamportClock, Constants.CHECK_MESSAGE, new LinkedList<>());
 		this.request.add(uid);
 	}

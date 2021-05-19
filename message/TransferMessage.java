@@ -1,3 +1,4 @@
+package message;
 /*******************************************************************************
  * Authors:
  * ---------
@@ -7,8 +8,10 @@
 import java.util.LinkedList;
 import java.util.List;
 
+import shared.Constants;
+
 public class TransferMessage extends Message {
-	TransferMessage(int serverId, int lamportClock, int sourceId, int targetId, int amount) {
+	public TransferMessage(int serverId, int lamportClock, int sourceId, int targetId, int amount) {
 		super(serverId, lamportClock, Constants.TRANSFER_MESSAGE, new LinkedList<>());
 		this.request.add(sourceId);
 		this.request.add(targetId);

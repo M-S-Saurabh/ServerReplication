@@ -5,6 +5,13 @@ import java.util.PriorityQueue;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.logging.Logger;
 
+import message.CheckMessage;
+import message.CreateMessage;
+import message.DepositMessage;
+import message.Message;
+import message.TransferMessage;
+import shared.Constants;
+
 /*******************************************************************************
  * Authors:
  * ---------

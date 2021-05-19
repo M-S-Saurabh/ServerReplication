@@ -1,3 +1,4 @@
+package message;
 /*******************************************************************************
  * Authors:
  * ---------
@@ -6,8 +7,10 @@
  ******************************************************************************/
 import java.util.LinkedList;
 
+import shared.Constants;
+
 public class DepositMessage extends Message {
-	DepositMessage(int serverId, int lamportClock, int uid, int amount) {
+	public DepositMessage(int serverId, int lamportClock, int uid, int amount) {
 		super(serverId, lamportClock, Constants.DEPOSIT_MESSAGE, new LinkedList<>());
 		this.request.add(uid);
 		this.request.add(amount);

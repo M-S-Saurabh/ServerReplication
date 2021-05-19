@@ -27,6 +27,8 @@ import java.util.logging.FileHandler;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 
+import shared.Constants;
+
 public class RMIClient {
 	
 	public static final Logger logger = Logger.getLogger(Logger.GLOBAL_LOGGER_NAME);

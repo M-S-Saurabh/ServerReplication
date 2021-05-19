@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.Random;
 import java.util.logging.Logger;
 
+import shared.Constants;
+
 
 public class RMIClientThread implements Runnable {
 	
