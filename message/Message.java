@@ -29,7 +29,7 @@ public class Message implements Serializable  {
 		this.messageId = ++count;
 	}
 	
-	boolean equals(Message msg) {
+	public boolean equals(Message msg) {
 		return (this.messageId == msg.messageId) && (this.serverId == msg.serverId);
 	}
 	

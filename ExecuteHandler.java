@@ -81,9 +81,6 @@ public class ExecuteHandler {
 		    if (msg.equals(message)){ 
 		    	iterator.remove(); continue; 
 	    	}
-//		    if (msg.getType() == Constants.ACK_MESSAGE && ((AckMessage) msg).ackEquals(message)) {
-//	    		iterator.remove();
-//		    }
 		}
 	}
 

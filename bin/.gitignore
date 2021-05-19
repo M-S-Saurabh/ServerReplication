@@ -1,0 +1,8 @@
+/.metadata/
+/EchoClient.class
+/EchoServer.class
+/logs/*.log
+/logs/*.lck
+/*.class
+/message/
+/shared/
