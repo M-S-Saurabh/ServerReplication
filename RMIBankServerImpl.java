@@ -319,7 +319,7 @@ public class RMIBankServerImpl extends UnicastRemoteObject implements RMIBankSer
 	}
 
 	@Override
-	public String transferRMI(int sourceId, int targetId, int amount) throws RemoteException {
+	public synchronized String transferRMI(int sourceId, int targetId, int amount) throws RemoteException {
 		long t0 = System.nanoTime(); 
 		
 		// Log the client message

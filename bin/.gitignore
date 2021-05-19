@@ -4,5 +4,3 @@
 /logs/*.log
 /logs/*.lck
 /*.class
-/message/
-/shared/
