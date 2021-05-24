@@ -41,6 +41,7 @@ public final class Constants {
 	public static final String TRANSFER_MESSAGE = "TRANSFER";
 	public static final String ACK_MESSAGE = "ACK";
 	public static final String EXECUTE_MESSAGE = "EXECUTE";
+	public static final String REMOVE_MESSAGE = "REMOVE";
 	
 	// Failure reason strings
 	public static final String INSUFFICIENT_BALANCE = "In-sufficient balance in source account.";

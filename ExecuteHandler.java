@@ -68,13 +68,10 @@ public class ExecuteHandler {
 	    		logger.severe("ServerID:"+this.serverId+" message:"+message.getMessageId()+": Operation "+operationName+" not implemented. Response is null.");
         }
         
-        // Remove message and its acks after execution.
-        removeMessages(message);
-        
 		return response;
 	}
 	
-	private void removeMessages(Message message) {
+	void removeMessages(Message message) {
 		// Remove the message which is executed.
 		for (Iterator<Message> iterator = lamportQueue.iterator(); iterator.hasNext(); ) {
 		    Message msg = iterator.next();

@@ -39,6 +39,7 @@ import message.DepositMessage;
 import message.ExecuteMessage;
 import message.Message;
 import message.MessageComparator;
+import message.RemoveMessage;
 import message.TransferMessage;
 import shared.Constants;
 
@@ -259,20 +260,29 @@ public class RMIBankServerImpl extends UnicastRemoteObject implements RMIBankSer
 		
 		waitForQueue(message);
 		int response = 0;
-		synchronized(this) {
-			// Increment clock and Multicast this message to other servers
-			this.advanceClock();
-			Message execMessage = new ExecuteMessage(this.serverID, this.getClock(), Constants.EXECUTE_MESSAGE, message);
-			logger.info(String.format(Constants.SERVER_MSG_LOG, 
-					this.serverID, Constants.SERVER_REQ, LocalDateTime.now(),
-					execMessage.getTimeStamp(), execMessage.getServerId(), execMessage.getType(), execMessage.getRequest()));
-			
-			this.sendMulticast(execMessage);
-
-			// Execute the message
-			this.advanceClock();
-			response = this.execHandler.execute(message);
-		}
+		
+		// Execute the message
+		this.advanceClock();
+		response = this.execHandler.execute(message);
+		
+		// Increment clock and Multicast this message to other servers
+		this.advanceClock();
+		Message execMessage = new ExecuteMessage(this.serverID, this.getClock(), Constants.EXECUTE_MESSAGE, message);
+		logger.info(String.format(Constants.SERVER_MSG_LOG, 
+				this.serverID, Constants.SERVER_REQ, LocalDateTime.now(),
+				execMessage.getTimeStamp(), execMessage.getServerId(), execMessage.getType(), execMessage.getRequest()));
+		this.sendMulticast(execMessage);
+		
+		// Execute the message
+		this.advanceClock();
+		this.execHandler.removeMessages(message);
+		this.advanceClock();
+		Message removeMessage = new RemoveMessage(this.serverID, this.getClock(), Constants.REMOVE_MESSAGE, message);
+		logger.info(String.format(Constants.SERVER_MSG_LOG, 
+				this.serverID, Constants.SERVER_REQ, LocalDateTime.now(),
+				removeMessage.getTimeStamp(), removeMessage.getServerId(), removeMessage.getType(), removeMessage.getRequest()));
+		this.sendMulticast(removeMessage);
+		
 				
 		return response;
 	}
@@ -359,7 +369,12 @@ public class RMIBankServerImpl extends UnicastRemoteObject implements RMIBankSer
 			// Execute the message
 			Message toExec = ((ExecuteMessage) message).getExecMessage();
 			this.execHandler.execute(toExec);
-		}else {
+		}else if(message.getType().equals(Constants.REMOVE_MESSAGE)) {
+			// Execute the message
+			Message toRemove = ((RemoveMessage) message).getRemoveMessage();
+			this.execHandler.removeMessages(toRemove);
+		}
+		else {
 			// Put in local queue.
 			this.lamportQueue.add(message);
 		}
